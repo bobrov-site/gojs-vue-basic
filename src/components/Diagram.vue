@@ -1,13 +1,15 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import * as go from "gojs";
 import "../assets//styles/style.css";
 
 const props = defineProps({ nodeDataArray: [], linkDataArray: [] });
 const emitter = defineEmits(["ExternalObjectsDropped", "SelectionMoved"]);
 const diagram = ref(null);
+const isDialogOpen = ref(false);
 const diagramModel = ref();
-const licenseList = [
+const licenseListModal = ref([]);
+const licenseList = ref([
   {
     id: 0,
     text: "MI2",
@@ -28,8 +30,18 @@ const licenseList = [
     text: "Tesss",
     weight: null,
   },
-];
-const lisencesNamesList = licenseList.map((item) => item.text);
+]);
+const computedListLicenses = computed(() => {
+  if (licenseListModal.value.length === 0) {
+    return licenseList.value.map((item) => item.text);
+  }
+  else {
+    console.log(licenseListModal.value)
+    console.log(licenseList.value)
+    return licenseList.value.filter((l) => !licenseListModal.value.includes(l.text)).map((item) => item.text)
+  }
+})
+const lisencesNamesList = licenseList.value.map((item) => item.text);
 const lisencesWeight = [0, 1, null];
 // Функция для добавления ответа
 const init = () => {
@@ -82,17 +94,18 @@ const init = () => {
     const node = obj.part;
     const diagram = node.diagram;
     const startLisence = {
-      text: 'Выберите имя лиценции',
+      text: 'Вставьте имя лицензии',
       weight: 0,
     }
     diagram.startTransaction("addLicense");
     const data = [...node.data.licenses, startLisence];
     diagram.model.setDataProperty(node.data, "licenses", data);
+    isDialogOpen.value = true;
+    licenseListModal.value = data.map((item) => item.text).filter((item) => item !== 'Вставьте имя лицензии');
     diagram.commitTransaction("addLicense");
     // https://gojs.net/latest/intro/dataBinding.html
   };
 
-  const chooseLicense = (e, obj) => {};
   // Определение шаблона для нод
   const questionTemplate = new go.Node("Auto").add(
     new go.Shape("RoundedRectangle", {
@@ -146,7 +159,8 @@ const init = () => {
       )
   );
 
-  const answerTemplate = new go.Node("Auto").add(
+  const answerTemplate = new go.Node("Auto", {
+  }).add(
     new go.Shape("RoundedRectangle", {
       fill: "transparent",
       stroke: "blue",
@@ -197,7 +211,7 @@ const init = () => {
           margin: new go.Margin(0, 240, 12, 0),
           font: "18px DM Sans sans-serif",
           stroke: "#1F1D1D",
-          editable: true,
+          editable: false,
           text: "Лицензия",
           width: 100,
           row: 3,
@@ -209,7 +223,7 @@ const init = () => {
           margin: new go.Margin(0, 0, 12, 240),
           font: "18px DM Sans sans-serif",
           stroke: "#1F1D1D",
-          editable: true,
+          editable: false,
           // width: 340,
           text: "Значение",
           row: 3,
@@ -222,27 +236,11 @@ const init = () => {
           column: 1,
           itemTemplate: new go.Panel("Table", {margin: new go.Margin(0, 0, 10, 0)})
             .add(
-              new go.GraphObject.build("Button", {
-                click: chooseLicense,
-                height: 50,
-                width: 130,
-                margin: new go.Margin(0, 190, 0, 0),
-              })
-              .add(
-                new go.TextBlock().bind("text", "text", function (t) {
-                  return `${t} ↓`;
-                })
-              ),
-              new go.GraphObject.build("Button", {
-                click: chooseLicense,
-                height: 50,
-                width: 100,
-                margin: new go.Margin(0, 0, 0, 220),
-              }).add(
-                new go.TextBlock().bind("text", "weight", function (t) {
-                  return `${t} ↓`;
-                })
-              )
+              new go.TextBlock({
+                editable: true, 
+                margin: new go.Margin(0,180,0,0)
+              }).bind(new go.Binding("text", "text").makeTwoWay()),
+              new go.TextBlock({editable: true}).bind(new go.Binding("text", "weight").makeTwoWay())
             )
         }).bind("itemArray", "licenses")
       )
@@ -261,7 +259,7 @@ const init = () => {
       )
   );
 
-  const templatesMap = new go.Map();
+  const templatesMap = new go.Map(); 
 
   templatesMap.add("question", questionTemplate);
   templatesMap.add("answer", answerTemplate);
@@ -287,6 +285,10 @@ const init = () => {
   diagramModel.value = myDiagram.model;
 };
 
+const toggleDialog = () => {
+  isDialogOpen.value = !isDialogOpen.value
+}
+
 onMounted(function () {
   init();
 });
@@ -294,6 +296,19 @@ onMounted(function () {
 
 <template>
   <div ref="diagram" class="goDiagram" id="myDiagramDiv"></div>
+  <div v-show="isDialogOpen" class="dialog">
+    <div class="dialog-content">
+      <div>
+        <button class="dialog-button" @click.stop="toggleDialog" type="button">X</button>
+      </div>
+      <div>
+        Скопируйте название лицензии ниже и вставьте в текстовое поле. Список доступных лицензий:
+      </div>
+      <ul>
+      <li v-for="item in computedListLicenses" :key="item.id">{{ item }}</li>
+    </ul>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -301,5 +316,30 @@ onMounted(function () {
   width: 100vw;
   height: 100vh;
   border: solid black 1px;
+}
+.dialog {
+  position: absolute;
+  z-index: 9999;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+}
+
+.dialog-content {
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  max-width: 300px;
+  width: 100%;
+  background-color: white;
+  padding: 12px;
+}
+
+.dialog-button {
+  margin-left: auto;
+  display: inline-block;
 }
 </style>
