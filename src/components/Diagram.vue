@@ -7,7 +7,7 @@ const props = defineProps({ nodeDataArray: [], linkDataArray: [] });
 const emitter = defineEmits(["ExternalObjectsDropped", "SelectionMoved"]);
 const diagram = ref(null);
 const diagramModel = ref();
-const lisences = [
+const licenseList = [
   {
     id: 0,
     text: "MI2",
@@ -29,6 +29,8 @@ const lisences = [
     weight: null,
   },
 ];
+const lisencesNamesList = licenseList.map((item) => item.text);
+const lisencesWeight = [0, 1, null];
 // Функция для добавления ответа
 const init = () => {
   const $ = go.GraphObject.make;
@@ -59,6 +61,7 @@ const init = () => {
         // Указываем номер вопроса, к которому относится этот ответ, для создания связи
         parent: data.key,
         category: "answer",
+        licenses: [],
       });
 
       // Создаем уникальный ключ для линка
@@ -76,8 +79,16 @@ const init = () => {
   };
 
   const addLicense = (e, obj) => {
-    myDiagram.startTransaction("addLicense");
-    console.log(myDiagram.selection);
+    const node = obj.part;
+    const diagram = node.diagram;
+    const startLisence = {
+      text: 'Выберите имя лиценции',
+      weight: 0,
+    }
+    diagram.startTransaction("addLicense");
+    const data = [...node.data.licenses, startLisence];
+    diagram.model.setDataProperty(node.data, "licenses", data);
+    diagram.commitTransaction("addLicense");
     // https://gojs.net/latest/intro/dataBinding.html
   };
 
@@ -233,7 +244,7 @@ const init = () => {
                 })
               )
             )
-        }).bind("itemArray", "lisences")
+        }).bind("itemArray", "licenses")
       )
       .add(
         go.GraphObject.build("Button", {
@@ -244,7 +255,7 @@ const init = () => {
           column: 1,
         }).add(
           new go.TextBlock({
-            text: "Добавить лиценцию",
+            text: "Добавить лицензию",
           })
         )
       )
@@ -270,7 +281,7 @@ const init = () => {
       title: "Ответ 1 на вопрос #1",
       parent: "1",
       category: "answer",
-      lisences: lisences,
+      licenses: [],
     },
   ]);
   diagramModel.value = myDiagram.model;
