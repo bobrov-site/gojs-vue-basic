@@ -72,10 +72,11 @@ const init = () => {
       model.addNodeData({
         key: nextKey,
         title: `Ответ ${answerKey} на вопрос #${data.questionNumber}`,
+        // answer: ''
         // Указываем номер вопроса, к которому относится этот ответ, для создания связи
         parent: parentQuestion,
         category: "answer",
-        loc: `${node.location.x + 150} ${node.location.y}`,
+        loc: new go.Point(node.location.x + 300, node.location.y + 400),
         licenses: licenses,
       });
 
@@ -108,10 +109,9 @@ const init = () => {
         question: "Текст вопроса",
         parent: data.key,
         category: "question",
-        loc: `${node.location.x + 150} ${node.location.y}`
+        loc: new go.Point(node.location.x + 300, node.location.y + 400),
       });
       const nextLinkKey = (model.linkDataArray.length + 1).toString();
-
       // Добавляем связь от вопроса к ответу
       model.addLinkData({
         key: nextLinkKey,
@@ -119,6 +119,55 @@ const init = () => {
         to: nextKey,
       });
       model.commitTransaction("add question");
+    }
+  }
+
+  const collectLicenses = (key) => {
+  const licenses = [];
+
+  const collect = (currentKey) => {
+    const nodeDataArray = myDiagram.model.nodeDataArray;
+    const node = nodeDataArray.find(item => item.key === currentKey);
+    if (node) {
+      if (node.licenses) {
+        licenses.push(...node.licenses);
+      }
+      if (node.parent) {
+        collect(node.parent);
+      }
+    }
+  };
+
+  collect(key);
+  return licenses;
+};
+
+
+  const addResult = (e, obj) => {
+    const node = obj.part
+    const model = myDiagram.model;
+    if (node !== null) {
+      model.startTransaction("add result");
+      const data = node.data;
+      const parentKey = data.key
+      const nextKey = (model.nodeDataArray.length + 1).toString();
+      const licenses = [];
+      const parentLicences = collectLicenses(parentKey);
+      console.log(parentLicences)
+      model.addNodeData({
+        key: nextKey,
+        parent: data.key,
+        category: "result",
+        licenses: licenses,
+        loc: new go.Point(node.location.x + 300, node.location.y + 400),
+      });
+      const nextLinkKey = (model.linkDataArray.length + 1).toString();
+      model.addLinkData({
+        key: nextLinkKey,
+        from: data.key,
+        to: nextKey,
+      });
+      model.commitTransaction("add result");
     }
   }
 
@@ -138,12 +187,8 @@ const init = () => {
     // https://gojs.net/latest/intro/dataBinding.html
   };
 
-  const addResult = (e, obj) => {
-
-  }
-
   // Определение шаблона для нод
-  const questionTemplate = new go.Node("Auto").add(
+  const questionTemplate = new go.Node("Auto").bind(new go.Binding("location", "loc").makeTwoWay()).add(
     new go.Shape("RoundedRectangle", {
       fill: "transparent",
       stroke: "orange",
@@ -170,7 +215,7 @@ const init = () => {
           stroke: "#1F1D1D",
           editable: true,
           width: 340,
-        }).bind("text", "question")
+        }).bind(new go.Binding("text", "question").makeTwoWay())
       )
       .add(
         new go.Shape("LineH", {
@@ -195,8 +240,7 @@ const init = () => {
       )
   );
 
-  const answerTemplate = new go.Node("Auto", {
-  }).add(
+  const answerTemplate = new go.Node("Auto").bind(new go.Binding("location", "loc").makeTwoWay()).add(
     new go.Shape("RoundedRectangle", {
       fill: "transparent",
       stroke: "blue",
@@ -227,9 +271,7 @@ const init = () => {
           text: "Текст ответа",
           row: 1,
           column: 1,
-        }).bind("text", "answer", function (answer) {
-          return answer;
-        })
+        }).bind(new go.Binding("text", "answer").makeTwoWay())
       )
       .add(
         new go.Shape("LineH", {
@@ -319,7 +361,7 @@ const init = () => {
       )
       .add(
         go.GraphObject.build("Button", {
-          click: addLicense,
+          click: addResult,
           height: 44,
           width: 320,
           row: 8,
@@ -333,10 +375,81 @@ const init = () => {
       )
   );
 
+  const resultTemplate = new go.Node("Auto").bind(new go.Binding("location", "loc").makeTwoWay()).add(
+    new go.Shape("RoundedRectangle", {
+      fill: "transparent",
+      stroke: "green",
+      strokeWidth: 2,
+    }),
+    new go.Panel("Table", { width: 360 })
+      .add(
+        new go.TextBlock({
+          margin: new go.Margin(20, 0, 20, 0),
+          font: "14px DM Sans sans-serif",
+          editable: false, // Заголовок не редактируемый
+          textAlign: "left",
+          width: 340,
+          stroke: "#1F1D1D99",
+          text: 'Результат',
+          row: 0,
+          column: 1,
+        })
+      )
+      .add(
+        new go.TextBlock({
+          margin: new go.Margin(0, 0, 12, 0),
+          font: "18px DM Sans sans-serif",
+          stroke: "#1F1D1D",
+          editable: true,
+          width: 340,
+          text: "Текст результата",
+          row: 1,
+          column: 1,
+        }).bind(new go.Binding("text", "result").makeTwoWay())
+      )
+      .add(
+        new go.Shape("LineH", {
+          stroke: "gray",
+          strokeWidth: 2,
+          height: 0,
+          stretch: go.GraphObject.Horizontal,
+          margin: new go.Margin(0, 0, 12, 0),
+          row: 2,
+          column: 1,
+        })
+      )
+      .add(
+        new go.Panel("Vertical", {
+          row: 3,
+          column: 1,
+          itemTemplate: new go.Panel("Table", {margin: new go.Margin(0, 0, 10, 0)})
+            .add(
+              new go.TextBlock({
+                editable: false, 
+                margin: new go.Margin(0,180,0,0)
+              }).bind(new go.Binding("text", "text").makeTwoWay()),
+              new go.TextBlock({editable: false}).bind(new go.Binding("text", "weight").makeTwoWay())
+            )
+        }).bind("itemArray", "licenses")
+      )
+      .add(
+        new go.Shape("LineH", {
+          stroke: "gray",
+          strokeWidth: 2,
+          height: 0,
+          stretch: go.GraphObject.Horizontal,
+          margin: new go.Margin(12, 0, 12, 0),
+          row: 4,
+          column: 1,
+        })
+      )
+  );
+
   const templatesMap = new go.Map(); 
 
   templatesMap.add("question", questionTemplate);
   templatesMap.add("answer", answerTemplate);
+  templatesMap.add("result", resultTemplate);
 
   myDiagram.nodeTemplateMap = templatesMap;
 
@@ -349,21 +462,7 @@ const init = () => {
       category: "question",
       loc: "0 0",
     },
-    {
-      key: "2",
-      title: "Ответ 1 на вопрос #1",
-      parent: "1",
-      category: "answer",
-      licenses: [],
-      loc: "300 0",
-    },
-  ],
-[
-  {
-    from: "1",
-    to: "2"
-  }
-]);
+  ]);
   diagramModel.value = myDiagram.model;
 };
 
