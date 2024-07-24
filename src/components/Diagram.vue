@@ -122,11 +122,11 @@ const init = () => {
     }
   }
 
-  const collectLicenses = (key) => {
+  const collectLicensesWithWeights = (key) => {
+  const nodeDataArray = myDiagram.model.nodeDataArray;
   const licenses = [];
 
   const collect = (currentKey) => {
-    const nodeDataArray = myDiagram.model.nodeDataArray;
     const node = nodeDataArray.find(item => item.key === currentKey);
     if (node) {
       if (node.licenses) {
@@ -139,7 +139,23 @@ const init = () => {
   };
 
   collect(key);
-  return licenses;
+
+  // Счетчик лицензий
+  const licenseCounts = licenses.reduce((acc, license) => {
+    if (!acc[license.text]) {
+      acc[license.text] = 0;
+    }
+    acc[license.text] += parseInt(license.weight, 10);
+    return acc;
+  }, {});
+
+  // Преобразуем в массив объектов
+  const result = Object.keys(licenseCounts).map(text => ({
+    text,
+    weight: licenseCounts[text]
+  }));
+
+  return result;
 };
 
 
@@ -151,14 +167,12 @@ const init = () => {
       const data = node.data;
       const parentKey = data.key
       const nextKey = (model.nodeDataArray.length + 1).toString();
-      const licenses = [];
-      const parentLicences = collectLicenses(parentKey);
-      console.log(parentLicences)
+      const resultLicenses = collectLicensesWithWeights(parentKey).filter((item) => !isNaN(item.weight));
       model.addNodeData({
         key: nextKey,
         parent: data.key,
         category: "result",
-        licenses: licenses,
+        licenses: resultLicenses,
         loc: new go.Point(node.location.x + 300, node.location.y + 400),
       });
       const nextLinkKey = (model.linkDataArray.length + 1).toString();
@@ -431,17 +445,6 @@ const init = () => {
               new go.TextBlock({editable: false}).bind(new go.Binding("text", "weight").makeTwoWay())
             )
         }).bind("itemArray", "licenses")
-      )
-      .add(
-        new go.Shape("LineH", {
-          stroke: "gray",
-          strokeWidth: 2,
-          height: 0,
-          stretch: go.GraphObject.Horizontal,
-          margin: new go.Margin(12, 0, 12, 0),
-          row: 4,
-          column: 1,
-        })
       )
   );
 
