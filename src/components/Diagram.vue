@@ -3,8 +3,6 @@ import { computed, onMounted, ref } from "vue";
 import * as go from "gojs";
 import "../assets//styles/style.css";
 
-const props = defineProps({ nodeDataArray: [], linkDataArray: [] });
-const emitter = defineEmits(["ExternalObjectsDropped", "SelectionMoved"]);
 const diagram = ref(null);
 const isDialogOpen = ref(false);
 const diagramModel = ref();
@@ -36,13 +34,9 @@ const computedListLicenses = computed(() => {
     return licenseList.value.map((item) => item.text);
   }
   else {
-    console.log(licenseListModal.value)
-    console.log(licenseList.value)
     return licenseList.value.filter((l) => !licenseListModal.value.includes(l.text)).map((item) => item.text)
   }
 })
-const lisencesNamesList = licenseList.value.map((item) => item.text);
-const lisencesWeight = [0, 1, null];
 // Функция для добавления ответа
 const init = () => {
   const $ = go.GraphObject.make;
@@ -62,19 +56,27 @@ const init = () => {
 
       // Создаем уникальный ключ для новой ноды ответа
       const nextKey = (model.nodeDataArray.length + 1).toString();
-      const answerKey =
-        model.nodeDataArray.filter((item) => item.parent === data.key).length +
-        1;
+      const answerKey = model.nodeDataArray.filter((item) => item.parent === data.key).length + 1;
+      const parentQuestion = data.key;
+      const keyOfParentQuestion = model.nodeDataArray.find((item) => item.key === parentQuestion).parent
+      const licenses = [];
+      if (keyOfParentQuestion) {
+        const parentData = model.nodeDataArray.find((item) => item.key === keyOfParentQuestion).licenses.filter((item) => item.weight !== "null")
+        licenses.push(...parentData)
+      }
+      //parent ищет key в model.nodeDateArray
+      //Родитель родителя взять у него parent и найти по parentу нужный key
+      //обязательно сделать проверку
 
       // Добавляем новую ноду ответа
       model.addNodeData({
         key: nextKey,
         title: `Ответ ${answerKey} на вопрос #${data.questionNumber}`,
         // Указываем номер вопроса, к которому относится этот ответ, для создания связи
-        parent: data.key,
+        parent: parentQuestion,
         category: "answer",
         loc: `${node.location.x + 150} ${node.location.y}`,
-        licenses: [],
+        licenses: licenses,
       });
 
       // Создаем уникальный ключ для линка
@@ -135,6 +137,10 @@ const init = () => {
     diagram.commitTransaction("addLicense");
     // https://gojs.net/latest/intro/dataBinding.html
   };
+
+  const addResult = (e, obj) => {
+
+  }
 
   // Определение шаблона для нод
   const questionTemplate = new go.Node("Auto").add(
@@ -218,7 +224,7 @@ const init = () => {
           stroke: "#1F1D1D",
           editable: true,
           width: 340,
-          text: "Текст",
+          text: "Текст ответа",
           row: 1,
           column: 1,
         }).bind("text", "answer", function (answer) {
