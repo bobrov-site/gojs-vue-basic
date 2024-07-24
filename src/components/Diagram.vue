@@ -473,6 +473,11 @@ const toggleDialog = () => {
   isDialogOpen.value = !isDialogOpen.value
 }
 
+const saveJson = () => {
+  const json = diagramModel.value.toJson()
+  console.log(json);
+}
+
 onMounted(function () {
   init();
 });
@@ -496,6 +501,7 @@ onMounted(function () {
     </ul>
     </div>
   </div>
+  <button @click="saveJson" class="save-button" type="button">Сохранить изменения</button>
 </template>
 
 <style scoped>
@@ -513,6 +519,26 @@ onMounted(function () {
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
+}
+
+.save-button {
+  color: #00C16A;
+  padding: 10px;
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+  line-height: 20px;
+  position: absolute;
+  right: 20px;
+  bottom: 0;
+  background: #F7F7FA;
+  border: none;
+  cursor: pointer;
+  z-index: 9999;
+}
+.save-button:hover {
+  color: #00C16A;
+  background: #E5E5EA;
 }
 
 .dialog-content {
