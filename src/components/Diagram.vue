@@ -73,6 +73,7 @@ const init = () => {
         // Указываем номер вопроса, к которому относится этот ответ, для создания связи
         parent: data.key,
         category: "answer",
+        loc: `${node.location.x + 150} ${node.location.y}`,
         licenses: [],
       });
 
@@ -105,6 +106,7 @@ const init = () => {
         question: "Текст вопроса",
         parent: data.key,
         category: "question",
+        loc: `${node.location.x + 150} ${node.location.y}`
       });
       const nextLinkKey = (model.linkDataArray.length + 1).toString();
 
@@ -216,7 +218,7 @@ const init = () => {
           stroke: "#1F1D1D",
           editable: true,
           width: 340,
-          text: "Да",
+          text: "Текст",
           row: 1,
           column: 1,
         }).bind("text", "answer", function (answer) {
@@ -339,6 +341,7 @@ const init = () => {
       questionNumber: "1",
       question: "Является ли ваше произведение ПО?",
       category: "question",
+      loc: "0 0",
     },
     {
       key: "2",
@@ -346,6 +349,7 @@ const init = () => {
       parent: "1",
       category: "answer",
       licenses: [],
+      loc: "300 0",
     },
   ],
 [
