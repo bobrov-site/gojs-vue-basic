@@ -233,9 +233,10 @@ const init = () => {
       )
       .add(
         new go.Shape("LineH", {
-          stroke: "gray",
-          strokeWidth: 2,
+          stroke: "#E2E8F0",
+          strokeWidth: 1,
           height: 0,
+          width: 340,
           stretch: go.GraphObject.Horizontal,
           margin: new go.Margin(0, 0, 12, 0),
         })
@@ -289,9 +290,10 @@ const init = () => {
       )
       .add(
         new go.Shape("LineH", {
-          stroke: "gray",
-          strokeWidth: 2,
+          stroke: "#E2E8F0",
+          strokeWidth: 1,
           height: 0,
+          width: 340,
           stretch: go.GraphObject.Horizontal,
           margin: new go.Margin(0, 0, 12, 0),
           row: 2,
@@ -351,9 +353,10 @@ const init = () => {
       )
       .add(
         new go.Shape("LineH", {
-          stroke: "gray",
-          strokeWidth: 2,
+          stroke: "#E2E8F0",
+          strokeWidth: 1,
           height: 0,
+          width: 340,
           stretch: go.GraphObject.Horizontal,
           margin: new go.Margin(12, 0, 12, 0),
           row: 6,
@@ -423,9 +426,10 @@ const init = () => {
       )
       .add(
         new go.Shape("LineH", {
-          stroke: "gray",
-          strokeWidth: 2,
+          stroke: "#E2E8F0",
+          strokeWidth: 1,
           height: 0,
+          width: 340,
           stretch: go.GraphObject.Horizontal,
           margin: new go.Margin(0, 0, 12, 0),
           row: 2,
@@ -529,8 +533,8 @@ onMounted(function () {
   font-weight: 500;
   line-height: 20px;
   position: absolute;
-  right: 20px;
-  bottom: 0;
+  right: 40px;
+  bottom: 40px;
   background: #F7F7FA;
   border: none;
   cursor: pointer;
