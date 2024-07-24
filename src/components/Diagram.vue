@@ -90,6 +90,34 @@ const init = () => {
     }
   };
 
+  const addQuestion = (e, obj) => {
+    const node = obj.part
+    const model = myDiagram.model;
+    if (node !== null) {
+      model.startTransaction("add question");
+      const data = node.data;
+      const nextKey = (model.nodeDataArray.length + 1).toString();
+      const questionNumber = model.nodeDataArray.filter((item) => item.category === 'question').length + 1;
+      // Добавляем новую ноду ответа
+      model.addNodeData({
+        key: nextKey,
+        questionNumber: `${questionNumber}`,
+        question: "Текст вопроса",
+        parent: data.key,
+        category: "question",
+      });
+      const nextLinkKey = (model.linkDataArray.length + 1).toString();
+
+      // Добавляем связь от вопроса к ответу
+      model.addLinkData({
+        key: nextLinkKey,
+        from: data.key,
+        to: nextKey,
+      });
+      model.commitTransaction("add question");
+    }
+  }
+
   const addLicense = (e, obj) => {
     const node = obj.part;
     const diagram = node.diagram;
@@ -257,6 +285,44 @@ const init = () => {
           })
         )
       )
+      .add(
+        new go.Shape("LineH", {
+          stroke: "gray",
+          strokeWidth: 2,
+          height: 0,
+          stretch: go.GraphObject.Horizontal,
+          margin: new go.Margin(12, 0, 12, 0),
+          row: 6,
+          column: 1,
+        })
+      )
+      .add(
+        go.GraphObject.build("Button", {
+          click: addQuestion,
+          height: 44,
+          width: 320,
+          row: 7,
+          column: 1,
+        }).add(
+          new go.TextBlock({
+            text: "Добавить вопрос",
+          })
+        )
+      )
+      .add(
+        go.GraphObject.build("Button", {
+          click: addLicense,
+          height: 44,
+          width: 320,
+          row: 8,
+          column: 1,
+          margin: new go.Margin(12, 0, 12, 0),
+        }).add(
+          new go.TextBlock({
+            text: "Результат",
+          })
+        )
+      )
   );
 
   const templatesMap = new go.Map(); 
@@ -281,7 +347,13 @@ const init = () => {
       category: "answer",
       licenses: [],
     },
-  ]);
+  ],
+[
+  {
+    from: "1",
+    to: "2"
+  }
+]);
   diagramModel.value = myDiagram.model;
 };
 
@@ -302,7 +374,10 @@ onMounted(function () {
         <button class="dialog-button" @click.stop="toggleDialog" type="button">X</button>
       </div>
       <div>
-        Скопируйте название лицензии ниже и вставьте в текстовое поле. Список доступных лицензий:
+        Скопируйте название лицензии ниже и вставьте в текстовое поле. 
+        <br>
+        Укажите вес лиценции в числовом поле. Это могут быть значения 0, 1 или null.
+        Список доступных лицензий:
       </div>
       <ul>
       <li v-for="item in computedListLicenses" :key="item.id">{{ item }}</li>
