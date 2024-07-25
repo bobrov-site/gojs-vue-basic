@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, shallowRef } from "vue";
 import * as go from "gojs";
 import "../assets//styles/style.css";
 import api from "../api";
@@ -11,8 +11,7 @@ const gray = "#64748B";
 const diagram = ref(null);
 const isDialogOpen = ref(false);
 const diagramModel = ref();
-const currentNode = ref(null);
-const currentObj = ref(null); // Новое состояние для хранения obj
+const currentNode = shallowRef(null);
 const licenseListModal = ref([]);
 const licenseList = ref([
   {
@@ -209,25 +208,9 @@ const init = () => {
   };
 
   const addLicense = (e, obj) => {
-    const name = 'Название'
-    currentObj.value = obj;
     const node = obj.part;
-    currentNode.value = node;
-    const diagram = node.diagram;
-    const startLicense = {
-      text: name,
-      weight: 0,
-    };
-
-    diagram.startTransaction("addLicense");
-    const data = [...node.data.licenses, startLicense];
-    diagram.model.setDataProperty(node.data, "licenses", data);
-    licenseListModal.value = data
-      .map((item) => item.text)
-      .filter((item) => item !== name);
-    diagram.commitTransaction("addLicense");
-
     isDialogOpen.value = true;
+    currentNode.value = node;
   };
 
   // Определение шаблона для нод
@@ -523,6 +506,23 @@ const init = () => {
 };
 
 const setLicenseToNode = (licenseName) => {
+  const name = licenseName
+  const node = currentNode.value
+
+    const diagram = node.diagram;
+    const startLicense = {
+      text: name,
+      weight: 0,
+    };
+    console.log(node)
+
+    diagram.startTransaction("addLicenseList");
+    const data = [...node.data.licenses, startLicense];
+    diagram.model.setDataProperty(node.data, "licenses", data);
+    licenseListModal.value = data
+      .map((item) => item.text)
+      .filter((item) => item !== name);
+  diagram.commitTransaction("addLicenseList");
   navigator.clipboard.writeText(licenseName);
   isDialogOpen.value = false;
 }
@@ -549,13 +549,6 @@ onMounted(() => {
         <button class="dialog-button" @click.stop="toggleDialog" type="button">
           X
         </button>
-      </div>
-      <div class="dialog-text">
-        <p>Нажмите на нужную лиценцию и вставьте его в поле с названием лицензии</p>
-        <p>
-          Укажите вес лиценции в числовом поле. Это могут быть значения 0, 1 или
-          null. Список доступных лицензий:
-        </p>
       </div>
       <ul class="list">
         <li v-for="item in computedListLicenses" :key="item.id">
