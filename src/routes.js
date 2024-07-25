@@ -1,6 +1,7 @@
+const domain = 'http://choosealicense.dev.rusrobots.ru';
+
 const routes = {
-    domain: 'http://choosealicense.dev.rusrobots.ru',
-    baseUrl: `${this.domain}/api`,
+    baseUrl: `${domain}/api`,
     licensesDictionary: '/licenses/dictionary',
     quiz: '/quiz',
 }
