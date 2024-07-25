@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import * as go from "gojs";
 import "../assets//styles/style.css";
+import api from "../api";
 
 const diagram = ref(null);
 const isDialogOpen = ref(false);
@@ -40,7 +41,11 @@ const computedListLicenses = computed(() => {
       .map((item) => item.text);
   }
 });
-// Функция для добавления ответа
+
+const fetchLicenses = async() => {
+  const data = await api.fetchLicenses()
+  console.log(data);
+}
 const init = () => {
   const $ = go.GraphObject.make;
   const green = "#00C16A";
@@ -511,6 +516,11 @@ const init = () => {
   diagramModel.value = myDiagram.model;
 };
 
+const setLicenseToNode = (licenseName) => {
+  navigator.clipboard.writeText(licenseName);
+  isDialogOpen.value = false;
+}
+
 const toggleDialog = () => {
   isDialogOpen.value = !isDialogOpen.value;
 };
@@ -520,9 +530,9 @@ const saveJson = () => {
   console.log(json);
 };
 
-onMounted(function () {
+onMounted(() => {
   init();
-});
+})
 </script>
 
 <template>
@@ -540,16 +550,16 @@ onMounted(function () {
         Укажите вес лиценции в числовом поле. Это могут быть значения 0, 1 или
         null. Список доступных лицензий:
       </div>
-      <ul>
+      <ul class="list">
         <li v-for="item in computedListLicenses" :key="item.id">
-          <button @click="setLicenseToNode(item)" type="button">
+          <button class="button-list" @click="setLicenseToNode(item)" type="button">
             {{ item }}
           </button>
         </li>
       </ul>
     </div>
   </div>
-  <button @click="saveJson" class="save-button" type="button">
+  <button @click="saveJson" class="button" type="button">
     Сохранить изменения
   </button>
 </template>
@@ -570,8 +580,27 @@ onMounted(function () {
   display: flex;
   align-items: center;
 }
-
-.save-button {
+.list {
+  list-style-type: none;
+  padding-left: 0;
+}
+.button-list {
+  color: #00c16a;
+  padding: 10px;
+  font-size: 14px;
+  font-family: "DM Sans", sans-serif;
+  font-weight: 500;
+  line-height: 20px;
+  background: #f7f7fa;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 15px;
+}
+.button-list:hover {
+  color: #00c16a;
+  background: #e5e5ea;
+}
+.button {
   color: #00c16a;
   padding: 10px;
   font-size: 14px;
@@ -586,7 +615,7 @@ onMounted(function () {
   cursor: pointer;
   z-index: 9999;
 }
-.save-button:hover {
+.button:hover {
   color: #00c16a;
   background: #e5e5ea;
 }
