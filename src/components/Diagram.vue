@@ -6,6 +6,8 @@ import "../assets//styles/style.css";
 const diagram = ref(null);
 const isDialogOpen = ref(false);
 const diagramModel = ref();
+const currentNode = ref(null);
+const currentObj = ref(null); // Новое состояние для хранения obj
 const licenseListModal = ref([]);
 const licenseList = ref([
   {
@@ -32,14 +34,19 @@ const licenseList = ref([
 const computedListLicenses = computed(() => {
   if (licenseListModal.value.length === 0) {
     return licenseList.value.map((item) => item.text);
+  } else {
+    return licenseList.value
+      .filter((l) => !licenseListModal.value.includes(l.text))
+      .map((item) => item.text);
   }
-  else {
-    return licenseList.value.filter((l) => !licenseListModal.value.includes(l.text)).map((item) => item.text)
-  }
-})
+});
 // Функция для добавления ответа
 const init = () => {
   const $ = go.GraphObject.make;
+  const green = "#00C16A";
+  const red = "#FCA5A5";
+  const sky = "#7DD3FC";
+  const gray = "#64748B";
   const myDiagram = $(
     go.Diagram,
     diagram.value.id, // ID div элемента, куда будет помещена диаграмма
@@ -56,13 +63,19 @@ const init = () => {
 
       // Создаем уникальный ключ для новой ноды ответа
       const nextKey = (model.nodeDataArray.length + 1).toString();
-      const answerKey = model.nodeDataArray.filter((item) => item.parent === data.key).length + 1;
+      const answerKey =
+        model.nodeDataArray.filter((item) => item.parent === data.key).length +
+        1;
       const parentQuestion = data.key;
-      const keyOfParentQuestion = model.nodeDataArray.find((item) => item.key === parentQuestion).parent
+      const keyOfParentQuestion = model.nodeDataArray.find(
+        (item) => item.key === parentQuestion
+      ).parent;
       const licenses = [];
       if (keyOfParentQuestion) {
-        const parentData = model.nodeDataArray.find((item) => item.key === keyOfParentQuestion).licenses.filter((item) => item.weight !== "null")
-        licenses.push(...parentData)
+        const parentData = model.nodeDataArray
+          .find((item) => item.key === keyOfParentQuestion)
+          .licenses.filter((item) => item.weight !== "null");
+        licenses.push(...parentData);
       }
       //parent ищет key в model.nodeDateArray
       //Родитель родителя взять у него parent и найти по parentу нужный key
@@ -72,11 +85,10 @@ const init = () => {
       model.addNodeData({
         key: nextKey,
         title: `Ответ ${answerKey} на вопрос #${data.questionNumber}`,
-        // answer: ''
         // Указываем номер вопроса, к которому относится этот ответ, для создания связи
         parent: parentQuestion,
         category: "answer",
-        loc: new go.Point(node.location.x + 300, node.location.y + 400),
+        loc: new go.Point(node.location.x + 0, node.location.y + 200),
         licenses: licenses,
       });
 
@@ -95,13 +107,15 @@ const init = () => {
   };
 
   const addQuestion = (e, obj) => {
-    const node = obj.part
+    const node = obj.part;
     const model = myDiagram.model;
     if (node !== null) {
       model.startTransaction("add question");
       const data = node.data;
       const nextKey = (model.nodeDataArray.length + 1).toString();
-      const questionNumber = model.nodeDataArray.filter((item) => item.category === 'question').length + 1;
+      const questionNumber =
+        model.nodeDataArray.filter((item) => item.category === "question")
+          .length + 1;
       // Добавляем новую ноду ответа
       model.addNodeData({
         key: nextKey,
@@ -120,54 +134,55 @@ const init = () => {
       });
       model.commitTransaction("add question");
     }
-  }
-
-  const collectLicensesWithWeights = (key) => {
-  const nodeDataArray = myDiagram.model.nodeDataArray;
-  const licenses = [];
-
-  const collect = (currentKey) => {
-    const node = nodeDataArray.find(item => item.key === currentKey);
-    if (node) {
-      if (node.licenses) {
-        licenses.push(...node.licenses);
-      }
-      if (node.parent) {
-        collect(node.parent);
-      }
-    }
   };
 
-  collect(key);
+  const collectLicensesWithWeights = (key) => {
+    const nodeDataArray = myDiagram.model.nodeDataArray;
+    const licenses = [];
 
-  // Счетчик лицензий
-  const licenseCounts = licenses.reduce((acc, license) => {
-    if (!acc[license.text]) {
-      acc[license.text] = 0;
-    }
-    acc[license.text] += parseInt(license.weight, 10);
-    return acc;
-  }, {});
+    const collect = (currentKey) => {
+      const node = nodeDataArray.find((item) => item.key === currentKey);
+      if (node) {
+        if (node.licenses) {
+          licenses.push(...node.licenses);
+        }
+        if (node.parent) {
+          collect(node.parent);
+        }
+      }
+    };
 
-  // Преобразуем в массив объектов
-  const result = Object.keys(licenseCounts).map(text => ({
-    text,
-    weight: licenseCounts[text]
-  }));
+    collect(key);
 
-  return result;
-};
+    // Счетчик лицензий
+    const licenseCounts = licenses.reduce((acc, license) => {
+      if (!acc[license.text]) {
+        acc[license.text] = 0;
+      }
+      acc[license.text] += parseInt(license.weight, 10);
+      return acc;
+    }, {});
 
+    // Преобразуем в массив объектов
+    const result = Object.keys(licenseCounts).map((text) => ({
+      text,
+      weight: licenseCounts[text],
+    }));
+
+    return result;
+  };
 
   const addResult = (e, obj) => {
-    const node = obj.part
+    const node = obj.part;
     const model = myDiagram.model;
     if (node !== null) {
       model.startTransaction("add result");
       const data = node.data;
-      const parentKey = data.key
+      const parentKey = data.key;
       const nextKey = (model.nodeDataArray.length + 1).toString();
-      const resultLicenses = collectLicensesWithWeights(parentKey).filter((item) => !isNaN(item.weight));
+      const resultLicenses = collectLicensesWithWeights(parentKey).filter(
+        (item) => !isNaN(item.weight)
+      );
       model.addNodeData({
         key: nextKey,
         parent: data.key,
@@ -183,276 +198,299 @@ const init = () => {
       });
       model.commitTransaction("add result");
     }
-  }
+  };
 
   const addLicense = (e, obj) => {
+    currentObj.value = obj;
     const node = obj.part;
+    currentNode.value = node;
     const diagram = node.diagram;
-    const startLisence = {
-      text: 'Вставьте имя лицензии',
+    const startLicense = {
+      text: "Вставьте имя лицензии",
       weight: 0,
-    }
+    };
+
     diagram.startTransaction("addLicense");
-    const data = [...node.data.licenses, startLisence];
+    const data = [...node.data.licenses, startLicense];
     diagram.model.setDataProperty(node.data, "licenses", data);
-    isDialogOpen.value = true;
-    licenseListModal.value = data.map((item) => item.text).filter((item) => item !== 'Вставьте имя лицензии');
+    licenseListModal.value = data
+      .map((item) => item.text)
+      .filter((item) => item !== "Вставьте имя лицензии");
     diagram.commitTransaction("addLicense");
-    // https://gojs.net/latest/intro/dataBinding.html
+
+    isDialogOpen.value = true;
   };
 
   // Определение шаблона для нод
-  const questionTemplate = new go.Node("Auto").bind(new go.Binding("location", "loc").makeTwoWay()).add(
-    new go.Shape("RoundedRectangle", {
-      fill: "transparent",
-      stroke: "orange",
-      strokeWidth: 2,
-    }),
-    new go.Panel("Vertical", { width: 360 })
-      .add(
-        new go.TextBlock({
-          margin: new go.Margin(20, 0, 20, 0),
-          font: "14px DM Sans sans-serif",
-          editable: false, // Заголовок не редактируемый
-          text: "textAlign: 'left'",
-          textAlign: "left",
-          width: 340,
-          stroke: "#1F1D1D99",
-        }).bind("text", "questionNumber", function (qn) {
-          return "Вопрос " + qn;
-        })
-      )
-      .add(
-        new go.TextBlock({
-          margin: new go.Margin(0, 0, 12, 0),
-          font: "18px DM Sans sans-serif",
-          stroke: "#1F1D1D",
-          editable: true,
-          width: 340,
-        }).bind(new go.Binding("text", "question").makeTwoWay())
-      )
-      .add(
-        new go.Shape("LineH", {
-          stroke: "#E2E8F0",
-          strokeWidth: 1,
-          height: 0,
-          width: 340,
-          stretch: go.GraphObject.Horizontal,
-          margin: new go.Margin(0, 0, 12, 0),
-        })
-      )
-      .add(
-        go.GraphObject.build("Button", {
-          click: addAnswer,
-          height: 44,
-          width: 320,
-        }).add(
+  const questionTemplate = new go.Node("Auto")
+    .bind(new go.Binding("location", "loc").makeTwoWay())
+    .add(
+      new go.Shape("RoundedRectangle", {
+        fill: "transparent",
+        stroke: red,
+        strokeWidth: 2,
+      }),
+      new go.Panel("Vertical", { width: 360 })
+        .add(
           new go.TextBlock({
-            text: "Добавить ответ",
-            stroke: "green",
+            margin: new go.Margin(20, 0, 20, 0),
+            font: "14px DM Sans sans-serif",
+            editable: false, // Заголовок не редактируемый
+            text: "textAlign: 'left'",
+            textAlign: "left",
+            width: 340,
+            stroke: "#1F1D1D99",
+          }).bind("text", "questionNumber", function (qn) {
+            return "Вопрос " + qn;
           })
         )
-      )
-  );
+        .add(
+          new go.TextBlock({
+            margin: new go.Margin(0, 0, 12, 0),
+            font: "18px DM Sans sans-serif",
+            stroke: "#1F1D1D",
+            editable: true,
+            width: 340,
+          }).bind(new go.Binding("text", "question").makeTwoWay())
+        )
+        .add(
+          new go.Shape("LineH", {
+            stroke: "#E2E8F0",
+            strokeWidth: 1,
+            height: 0,
+            width: 340,
+            stretch: go.GraphObject.Horizontal,
+            margin: new go.Margin(0, 0, 12, 0),
+          })
+        )
+        .add(
+          go.GraphObject.build("Button", {
+            click: addAnswer,
+            height: 44,
+            width: 340,
+            margin: new go.Margin(0, 0, 12, 0),
+          }).add(
+            new go.TextBlock({
+              text: "Добавить ответ",
+              font: "14px DM Sans, sans-serif",
+              stroke: green,
+            })
+          )
+        )
+    );
 
-  const answerTemplate = new go.Node("Auto").bind(new go.Binding("location", "loc").makeTwoWay()).add(
-    new go.Shape("RoundedRectangle", {
-      fill: "transparent",
-      stroke: "blue",
-      strokeWidth: 2,
-    }),
-    new go.Panel("Table", { width: 360 })
-      .add(
-        new go.TextBlock({
-          margin: new go.Margin(20, 0, 20, 0),
-          font: "14px DM Sans sans-serif",
-          editable: false, // Заголовок не редактируемый
-          textAlign: "left",
-          width: 340,
-          stroke: "#1F1D1D99",
-          row: 0,
-          column: 1,
-        }).bind("text", "title", function (title) {
-          return title;
-        })
-      )
-      .add(
-        new go.TextBlock({
-          margin: new go.Margin(0, 0, 12, 0),
-          font: "18px DM Sans sans-serif",
-          stroke: "#1F1D1D",
-          editable: true,
-          width: 340,
-          text: "Текст ответа",
-          row: 1,
-          column: 1,
-        }).bind(new go.Binding("text", "answer").makeTwoWay())
-      )
-      .add(
-        new go.Shape("LineH", {
-          stroke: "#E2E8F0",
-          strokeWidth: 1,
-          height: 0,
-          width: 340,
-          stretch: go.GraphObject.Horizontal,
-          margin: new go.Margin(0, 0, 12, 0),
-          row: 2,
-          column: 1,
-        })
-      )
-      .add(
-        new go.TextBlock({
-          margin: new go.Margin(0, 240, 12, 0),
-          font: "18px DM Sans sans-serif",
-          stroke: "#1F1D1D",
-          editable: false,
-          text: "Лицензия",
-          width: 100,
-          row: 3,
-          column: 1,
-        })
-      )
-      .add(
-        new go.TextBlock({
-          margin: new go.Margin(0, 0, 12, 240),
-          font: "18px DM Sans sans-serif",
-          stroke: "#1F1D1D",
-          editable: false,
-          // width: 340,
-          text: "Значение",
-          row: 3,
-          column: 1,
-        })
-      )
-      .add(
-        new go.Panel("Vertical", {
-          row: 4,
-          column: 1,
-          itemTemplate: new go.Panel("Table", {margin: new go.Margin(0, 0, 10, 0)})
-            .add(
+  const answerTemplate = new go.Node("Auto")
+    .bind(new go.Binding("location", "loc").makeTwoWay())
+    .add(
+      new go.Shape("RoundedRectangle", {
+        fill: "transparent",
+        stroke: sky,
+        strokeWidth: 2,
+      }),
+      new go.Panel("Table", { width: 360 })
+        .add(
+          new go.TextBlock({
+            margin: new go.Margin(20, 0, 20, 0),
+            font: "14px DM Sans sans-serif",
+            editable: false, // Заголовок не редактируемый
+            textAlign: "left",
+            width: 340,
+            stroke: "#1F1D1D99",
+            row: 0,
+            column: 1,
+          }).bind("text", "title", function (title) {
+            return title;
+          })
+        )
+        .add(
+          new go.TextBlock({
+            margin: new go.Margin(0, 0, 12, 0),
+            font: "18px DM Sans sans-serif",
+            stroke: "#1F1D1D",
+            editable: true,
+            width: 340,
+            text: "Текст ответа",
+            row: 1,
+            column: 1,
+          }).bind(new go.Binding("text", "answer").makeTwoWay())
+        )
+        .add(
+          new go.Shape("LineH", {
+            stroke: "#E2E8F0",
+            strokeWidth: 1,
+            height: 0,
+            width: 340,
+            stretch: go.GraphObject.Horizontal,
+            margin: new go.Margin(0, 0, 12, 0),
+            row: 2,
+            column: 1,
+          })
+        )
+        .add(
+          new go.TextBlock({
+            margin: new go.Margin(0, 240, 12, 0),
+            font: "14px DM Sans, sans-serif",
+            stroke: gray,
+            editable: false,
+            text: "Лицензия",
+            width: 100,
+            row: 3,
+            column: 1,
+          })
+        )
+        .add(
+          new go.TextBlock({
+            margin: new go.Margin(0, 0, 12, 240),
+            font: "14px DM Sans, sans-serif",
+            stroke: gray,
+            editable: false,
+            text: "Значение",
+            row: 3,
+            column: 1,
+          })
+        )
+        .add(
+          new go.Panel("Vertical", {
+            row: 4,
+            column: 1,
+            itemTemplate: new go.Panel("Table", {
+              margin: new go.Margin(0, 0, 10, 0),
+            }).add(
               new go.TextBlock({
-                editable: true, 
-                margin: new go.Margin(0,180,0,0)
+                editable: true,
+                margin: new go.Margin(0, 0, 0, 180),
               }).bind(new go.Binding("text", "text").makeTwoWay()),
-              new go.TextBlock({editable: true}).bind(new go.Binding("text", "weight").makeTwoWay())
-            )
-        }).bind("itemArray", "licenses")
-      )
-      .add(
-        go.GraphObject.build("Button", {
-          click: addLicense,
-          height: 44,
-          width: 320,
-          row: 5,
-          column: 1,
-        }).add(
-          new go.TextBlock({
-            text: "Добавить лицензию",
+              new go.TextBlock({ editable: true }).bind(
+                new go.Binding("text", "weight").makeTwoWay()
+              )
+            ),
+          }).bind("itemArray", "licenses")
+        )
+        .add(
+          go.GraphObject.build("Button", {
+            click: addLicense,
+            height: 44,
+            width: 320,
+            row: 5,
+            column: 1,
+          }).add(
+            new go.TextBlock({
+              text: "+ Добавить лицензию",
+              font: "14px DM Sans, sans-serif",
+            })
+          )
+        )
+        .add(
+          new go.Shape("LineH", {
+            stroke: "#E2E8F0",
+            strokeWidth: 1,
+            height: 0,
+            width: 340,
+            stretch: go.GraphObject.Horizontal,
+            margin: new go.Margin(12, 0, 12, 0),
+            row: 6,
+            column: 1,
           })
         )
-      )
-      .add(
-        new go.Shape("LineH", {
-          stroke: "#E2E8F0",
-          strokeWidth: 1,
-          height: 0,
-          width: 340,
-          stretch: go.GraphObject.Horizontal,
-          margin: new go.Margin(12, 0, 12, 0),
-          row: 6,
-          column: 1,
-        })
-      )
-      .add(
-        go.GraphObject.build("Button", {
-          click: addQuestion,
-          height: 44,
-          width: 320,
-          row: 7,
-          column: 1,
-        }).add(
-          new go.TextBlock({
-            text: "Добавить вопрос",
-          })
+        .add(
+          go.GraphObject.build("Button", {
+            click: addQuestion,
+            height: 44,
+            width: 320,
+            row: 7,
+            column: 1,
+          }).add(
+            new go.TextBlock({
+              text: "Добавить вопрос",
+              stroke: green,
+              font: "14px DM Sans, sans-serif",
+            })
+          )
         )
-      )
-      .add(
-        go.GraphObject.build("Button", {
-          click: addResult,
-          height: 44,
-          width: 320,
-          row: 8,
-          column: 1,
-          margin: new go.Margin(12, 0, 12, 0),
-        }).add(
+        .add(
+          go.GraphObject.build("Button", {
+            click: addResult,
+            height: 44,
+            width: 320,
+            row: 8,
+            column: 1,
+            margin: new go.Margin(12, 0, 12, 0),
+          }).add(
+            new go.TextBlock({
+              text: "Результат",
+              stroke: green,
+              font: "14px DM Sans, sans-serif",
+            })
+          )
+        )
+    );
+
+  const resultTemplate = new go.Node("Auto")
+    .bind(new go.Binding("location", "loc").makeTwoWay())
+    .add(
+      new go.Shape("RoundedRectangle", {
+        fill: "transparent",
+        stroke: green,
+        strokeWidth: 2,
+      }),
+      new go.Panel("Table", { width: 360 })
+        .add(
           new go.TextBlock({
+            margin: new go.Margin(20, 0, 20, 0),
+            font: "14px DM Sans sans-serif",
+            editable: false, // Заголовок не редактируемый
+            textAlign: "left",
+            width: 340,
+            stroke: "#1F1D1D99",
             text: "Результат",
+            row: 0,
+            column: 1,
           })
         )
-      )
-  );
-
-  const resultTemplate = new go.Node("Auto").bind(new go.Binding("location", "loc").makeTwoWay()).add(
-    new go.Shape("RoundedRectangle", {
-      fill: "transparent",
-      stroke: "green",
-      strokeWidth: 2,
-    }),
-    new go.Panel("Table", { width: 360 })
-      .add(
-        new go.TextBlock({
-          margin: new go.Margin(20, 0, 20, 0),
-          font: "14px DM Sans sans-serif",
-          editable: false, // Заголовок не редактируемый
-          textAlign: "left",
-          width: 340,
-          stroke: "#1F1D1D99",
-          text: 'Результат',
-          row: 0,
-          column: 1,
-        })
-      )
-      .add(
-        new go.TextBlock({
-          margin: new go.Margin(0, 0, 12, 0),
-          font: "18px DM Sans sans-serif",
-          stroke: "#1F1D1D",
-          editable: true,
-          width: 340,
-          text: "Текст результата",
-          row: 1,
-          column: 1,
-        }).bind(new go.Binding("text", "result").makeTwoWay())
-      )
-      .add(
-        new go.Shape("LineH", {
-          stroke: "#E2E8F0",
-          strokeWidth: 1,
-          height: 0,
-          width: 340,
-          stretch: go.GraphObject.Horizontal,
-          margin: new go.Margin(0, 0, 12, 0),
-          row: 2,
-          column: 1,
-        })
-      )
-      .add(
-        new go.Panel("Vertical", {
-          row: 3,
-          column: 1,
-          itemTemplate: new go.Panel("Table", {margin: new go.Margin(0, 0, 10, 0)})
-            .add(
+        .add(
+          new go.TextBlock({
+            margin: new go.Margin(0, 0, 12, 0),
+            font: "18px DM Sans sans-serif",
+            stroke: "#1F1D1D",
+            editable: true,
+            width: 340,
+            text: "Текст результата",
+            row: 1,
+            column: 1,
+          }).bind(new go.Binding("text", "result").makeTwoWay())
+        )
+        .add(
+          new go.Shape("LineH", {
+            stroke: "#E2E8F0",
+            strokeWidth: 1,
+            height: 0,
+            width: 340,
+            stretch: go.GraphObject.Horizontal,
+            margin: new go.Margin(0, 0, 12, 0),
+            row: 2,
+            column: 1,
+          })
+        )
+        .add(
+          new go.Panel("Vertical", {
+            row: 3,
+            column: 1,
+            itemTemplate: new go.Panel("Table", {
+              margin: new go.Margin(0, 0, 10, 0),
+            }).add(
               new go.TextBlock({
-                editable: false, 
-                margin: new go.Margin(0,180,0,0)
+                editable: false,
+                margin: new go.Margin(0, 180, 0, 0),
               }).bind(new go.Binding("text", "text").makeTwoWay()),
-              new go.TextBlock({editable: false}).bind(new go.Binding("text", "weight").makeTwoWay())
-            )
-        }).bind("itemArray", "licenses")
-      )
-  );
+              new go.TextBlock({ editable: false }).bind(
+                new go.Binding("text", "weight").makeTwoWay()
+              )
+            ),
+          }).bind("itemArray", "licenses")
+        )
+    );
 
-  const templatesMap = new go.Map(); 
+  const templatesMap = new go.Map();
 
   templatesMap.add("question", questionTemplate);
   templatesMap.add("answer", answerTemplate);
@@ -474,13 +512,13 @@ const init = () => {
 };
 
 const toggleDialog = () => {
-  isDialogOpen.value = !isDialogOpen.value
-}
+  isDialogOpen.value = !isDialogOpen.value;
+};
 
 const saveJson = () => {
-  const json = diagramModel.value.toJson()
+  const json = diagramModel.value.toJson();
   console.log(json);
-}
+};
 
 onMounted(function () {
   init();
@@ -492,20 +530,28 @@ onMounted(function () {
   <div v-show="isDialogOpen" class="dialog">
     <div class="dialog-content">
       <div>
-        <button class="dialog-button" @click.stop="toggleDialog" type="button">X</button>
+        <button class="dialog-button" @click.stop="toggleDialog" type="button">
+          X
+        </button>
       </div>
       <div>
-        Скопируйте название лицензии ниже и вставьте в текстовое поле. 
-        <br>
-        Укажите вес лиценции в числовом поле. Это могут быть значения 0, 1 или null.
-        Список доступных лицензий:
+        Скопируйте название лицензии ниже и вставьте в текстовое поле.
+        <br />
+        Укажите вес лиценции в числовом поле. Это могут быть значения 0, 1 или
+        null. Список доступных лицензий:
       </div>
       <ul>
-      <li v-for="item in computedListLicenses" :key="item.id">{{ item }}</li>
-    </ul>
+        <li v-for="item in computedListLicenses" :key="item.id">
+          <button @click="setLicenseToNode(item)" type="button">
+            {{ item }}
+          </button>
+        </li>
+      </ul>
     </div>
   </div>
-  <button @click="saveJson" class="save-button" type="button">Сохранить изменения</button>
+  <button @click="saveJson" class="save-button" type="button">
+    Сохранить изменения
+  </button>
 </template>
 
 <style scoped>
@@ -526,23 +572,23 @@ onMounted(function () {
 }
 
 .save-button {
-  color: #00C16A;
+  color: #00c16a;
   padding: 10px;
   font-size: 14px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: "DM Sans", sans-serif;
   font-weight: 500;
   line-height: 20px;
   position: absolute;
   right: 40px;
   bottom: 40px;
-  background: #F7F7FA;
+  background: #f7f7fa;
   border: none;
   cursor: pointer;
   z-index: 9999;
 }
 .save-button:hover {
-  color: #00C16A;
-  background: #E5E5EA;
+  color: #00c16a;
+  background: #e5e5ea;
 }
 
 .dialog-content {
