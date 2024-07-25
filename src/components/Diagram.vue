@@ -4,6 +4,10 @@ import * as go from "gojs";
 import "../assets//styles/style.css";
 import api from "../api";
 
+const green = "#00C16A";
+const red = "#FCA5A5";
+const sky = "#7DD3FC";
+const gray = "#64748B";
 const diagram = ref(null);
 const isDialogOpen = ref(false);
 const diagramModel = ref();
@@ -48,25 +52,24 @@ const fetchLicenses = async() => {
 }
 const init = () => {
   const $ = go.GraphObject.make;
-  const green = "#00C16A";
-  const red = "#FCA5A5";
-  const sky = "#7DD3FC";
-  const gray = "#64748B";
   const myDiagram = $(
     go.Diagram,
     diagram.value.id, // ID div элемента, куда будет помещена диаграмма
     {
-      "undoManager.isEnabled": true, // включает поддержку отмены для пользователя
+      "undoManager.isEnabled": true, // включает поддержку отмены для пользователя,
     }
   );
+
   const addAnswer = (e, obj) => {
     const node = obj.part; // Получаем ноду, к которой принадлежит кнопка
+    const defaultLocation = {
+      x: node.location.x + 0,
+      y: node.location.y + 200,
+    }
     if (node !== null) {
       const data = node.data;
       const model = myDiagram.model;
       model.startTransaction("add answer");
-
-      // Создаем уникальный ключ для новой ноды ответа
       const nextKey = (model.nodeDataArray.length + 1).toString();
       const answerKey =
         model.nodeDataArray.filter((item) => item.parent === data.key).length +
@@ -82,18 +85,18 @@ const init = () => {
           .licenses.filter((item) => item.weight !== "null");
         licenses.push(...parentData);
       }
-      //parent ищет key в model.nodeDateArray
-      //Родитель родителя взять у него parent и найти по parentу нужный key
-      //обязательно сделать проверку
-
-      // Добавляем новую ноду ответа
+      const siblings = model.nodeDataArray.filter((item) => item.parent === data.key)
+      // Добавляем новую ноду в бок ответа
+      if (siblings.length !== 0) {
+        defaultLocation.x = siblings[siblings.length - 1].loc.x + 400
+      }
       model.addNodeData({
         key: nextKey,
         title: `Ответ ${answerKey} на вопрос #${data.questionNumber}`,
         // Указываем номер вопроса, к которому относится этот ответ, для создания связи
         parent: parentQuestion,
         category: "answer",
-        loc: new go.Point(node.location.x + 0, node.location.y + 200),
+        loc: new go.Point(defaultLocation.x, defaultLocation.y),
         licenses: licenses,
       });
 
@@ -128,7 +131,7 @@ const init = () => {
         question: "Текст вопроса",
         parent: data.key,
         category: "question",
-        loc: new go.Point(node.location.x + 300, node.location.y + 400),
+        loc: new go.Point(node.location.x + 0, node.location.y + 350),
       });
       const nextLinkKey = (model.linkDataArray.length + 1).toString();
       // Добавляем связь от вопроса к ответу
@@ -193,7 +196,7 @@ const init = () => {
         parent: data.key,
         category: "result",
         licenses: resultLicenses,
-        loc: new go.Point(node.location.x + 300, node.location.y + 400),
+        loc: new go.Point(node.location.x + 0, node.location.y + 400),
       });
       const nextLinkKey = (model.linkDataArray.length + 1).toString();
       model.addLinkData({
@@ -206,12 +209,13 @@ const init = () => {
   };
 
   const addLicense = (e, obj) => {
+    const name = 'Название'
     currentObj.value = obj;
     const node = obj.part;
     currentNode.value = node;
     const diagram = node.diagram;
     const startLicense = {
-      text: "Вставьте имя лицензии",
+      text: name,
       weight: 0,
     };
 
@@ -220,7 +224,7 @@ const init = () => {
     diagram.model.setDataProperty(node.data, "licenses", data);
     licenseListModal.value = data
       .map((item) => item.text)
-      .filter((item) => item !== "Вставьте имя лицензии");
+      .filter((item) => item !== name);
     diagram.commitTransaction("addLicense");
 
     isDialogOpen.value = true;
@@ -299,7 +303,7 @@ const init = () => {
             font: "14px DM Sans sans-serif",
             editable: false, // Заголовок не редактируемый
             textAlign: "left",
-            width: 340,
+            width: 320,
             stroke: "#1F1D1D99",
             row: 0,
             column: 1,
@@ -313,7 +317,7 @@ const init = () => {
             font: "18px DM Sans sans-serif",
             stroke: "#1F1D1D",
             editable: true,
-            width: 340,
+            width: 320,
             text: "Текст ответа",
             row: 1,
             column: 1,
@@ -324,7 +328,7 @@ const init = () => {
             stroke: "#E2E8F0",
             strokeWidth: 1,
             height: 0,
-            width: 340,
+            width: 320,
             stretch: go.GraphObject.Horizontal,
             margin: new go.Margin(0, 0, 12, 0),
             row: 2,
@@ -333,7 +337,7 @@ const init = () => {
         )
         .add(
           new go.TextBlock({
-            margin: new go.Margin(0, 240, 12, 0),
+            margin: new go.Margin(0, 220, 12, 0),
             font: "14px DM Sans, sans-serif",
             stroke: gray,
             editable: false,
@@ -345,7 +349,7 @@ const init = () => {
         )
         .add(
           new go.TextBlock({
-            margin: new go.Margin(0, 0, 12, 240),
+            margin: new go.Margin(0, 0, 12, 250),
             font: "14px DM Sans, sans-serif",
             stroke: gray,
             editable: false,
@@ -363,9 +367,11 @@ const init = () => {
             }).add(
               new go.TextBlock({
                 editable: true,
-                margin: new go.Margin(0, 0, 0, 180),
+                width: 100,
+                margin: new go.Margin(0, 210, 0,0),
+                column: 0,
               }).bind(new go.Binding("text", "text").makeTwoWay()),
-              new go.TextBlock({ editable: true }).bind(
+              new go.TextBlock({ editable: true, column: 1 }).bind(
                 new go.Binding("text", "weight").makeTwoWay()
               )
             ),
@@ -544,11 +550,12 @@ onMounted(() => {
           X
         </button>
       </div>
-      <div>
-        Скопируйте название лицензии ниже и вставьте в текстовое поле.
-        <br />
-        Укажите вес лиценции в числовом поле. Это могут быть значения 0, 1 или
-        null. Список доступных лицензий:
+      <div class="dialog-text">
+        <p>Нажмите на нужную лиценцию и вставьте его в поле с названием лицензии</p>
+        <p>
+          Укажите вес лиценции в числовом поле. Это могут быть значения 0, 1 или
+          null. Список доступных лицензий:
+        </p>
       </div>
       <ul class="list">
         <li v-for="item in computedListLicenses" :key="item.id">
@@ -580,6 +587,12 @@ onMounted(() => {
   display: flex;
   align-items: center;
 }
+.dialog-text {
+  font-size: 14px;
+  font-family: "DM Sans", sans-serif;
+  font-weight: 500;
+  line-height: 20px;
+}
 .list {
   list-style-type: none;
   padding-left: 0;
@@ -595,7 +608,9 @@ onMounted(() => {
   border: none;
   cursor: pointer;
   margin-bottom: 15px;
+  width: 100%;
 }
+
 .button-list:hover {
   color: #00c16a;
   background: #e5e5ea;
@@ -633,5 +648,13 @@ onMounted(() => {
 .dialog-button {
   margin-left: auto;
   display: inline-block;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: "DM Sans", sans-serif;
+  font-weight: 500;
+  line-height: 20px;
+  color: #00c16a;
 }
 </style>
