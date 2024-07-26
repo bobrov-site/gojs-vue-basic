@@ -496,7 +496,7 @@ const init = () => {
             click: removeNode,
             height: 44,
             width: 320,
-            row: 8,
+            row: 9,
             column: 1,
             margin: new go.Margin(12, 0, 12, 0),
           }).add(
