@@ -117,6 +117,10 @@ const init = () => {
       model.startTransaction("add question");
       const data = node.data;
       const nextKey = (model.nodeDataArray.length + 1).toString();
+      const isHaveChildren = model.nodeDataArray.some((item) => item.parent === data.key && item.category === "question");
+      if (isHaveChildren) {
+        return;
+      }
       const questionNumber =
         model.nodeDataArray.filter((item) => item.category === "question")
           .length + 1;
