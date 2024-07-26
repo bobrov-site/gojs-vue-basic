@@ -9,45 +9,41 @@ const red = "#FCA5A5";
 const sky = "#7DD3FC";
 const gray = "#64748B";
 const diagram = ref(null);
+const nodes = ref({});
+const startNode = {
+      key: "1",
+      questionNumber: "1",
+      question: "Является ли ваше произведение ПО?",
+      category: "question",
+      loc: "0, 0"
+}
 const isDialogOpen = ref(false);
-const diagramModel = ref();
+const diagramModel = shallowRef();
 const currentNode = shallowRef(null);
 const licenseListModal = ref([]);
 const licenseList = ref([
-  {
-    id: 0,
-    text: "MI2",
-    weight: 0,
-  },
-  {
-    id: 1,
-    text: "Apache2",
-    weight: 0,
-  },
-  {
-    id: 2,
-    text: "Test333",
-    weight: 1,
-  },
-  {
-    id: 3,
-    text: "Tesss",
-    weight: null,
-  },
 ]);
 const computedListLicenses = computed(() => {
   if (licenseListModal.value.length === 0) {
-    return licenseList.value.map((item) => item.text);
+    return licenseList.value;
   } else {
     return licenseList.value
-      .filter((l) => !licenseListModal.value.includes(l.text))
-      .map((item) => item.text);
+      .filter((l) => !licenseListModal.value.includes(l.name))
+      .map((item) => item);
   }
 });
 
 const fetchLicenses = async() => {
-  const data = await api.fetchLicenses()
-  console.log(data);
+  const licenses = await api.fetchLicenses()
+  licenses.map((item) => {
+    const license = {
+      id: item.id,
+      name: item.name,
+      weight: 0
+    }
+    return license
+  })
+  licenseList.value = licenses
 }
 const init = () => {
   const $ = go.GraphObject.make;
@@ -163,17 +159,17 @@ const init = () => {
 
     // Счетчик лицензий
     const licenseCounts = licenses.reduce((acc, license) => {
-      if (!acc[license.text]) {
-        acc[license.text] = 0;
+      if (!acc[license.name]) {
+        acc[license.name] = 0;
       }
-      acc[license.text] += parseInt(license.weight, 10);
+      acc[license.name] += parseInt(license.weight, 10);
       return acc;
     }, {});
 
     // Преобразуем в массив объектов
-    const result = Object.keys(licenseCounts).map((text) => ({
-      text,
-      weight: licenseCounts[text],
+    const result = Object.keys(licenseCounts).map((name) => ({
+      name,
+      weight: licenseCounts[name],
     }));
 
     return result;
@@ -209,6 +205,8 @@ const init = () => {
 
   const addLicense = (e, obj) => {
     const node = obj.part;
+    console.log(licenseList.value, 'licenseList addLicense')
+    console.log(licenseListModal.value, 'licenseListModal addLicense');
     isDialogOpen.value = true;
     currentNode.value = node;
   };
@@ -353,7 +351,7 @@ const init = () => {
                 width: 100,
                 margin: new go.Margin(0, 210, 0,0),
                 column: 0,
-              }).bind(new go.Binding("text", "text").makeTwoWay()),
+              }).bind(new go.Binding("text", "name").makeTwoWay()),
               new go.TextBlock({ editable: true, column: 1 }).bind(
                 new go.Binding("text", "weight").makeTwoWay()
               )
@@ -475,7 +473,7 @@ const init = () => {
               new go.TextBlock({
                 editable: false,
                 margin: new go.Margin(0, 180, 0, 0),
-              }).bind(new go.Binding("text", "text").makeTwoWay()),
+              }).bind(new go.Binding("text", "name").makeTwoWay()),
               new go.TextBlock({ editable: false }).bind(
                 new go.Binding("text", "weight").makeTwoWay()
               )
@@ -493,50 +491,68 @@ const init = () => {
   myDiagram.nodeTemplateMap = templatesMap;
 
   // Создание начальной ноды
-  myDiagram.model = new go.GraphLinksModel([
-    {
-      key: "1",
-      questionNumber: "1",
-      question: "Является ли ваше произведение ПО?",
-      category: "question",
-      loc: "0 0",
-    },
-  ]);
+  console.log(nodes.value.nodeDataArray.length === 0)
+  if (nodes.value.nodeDataArray.length === 0) {
+    myDiagram.model = new go.GraphLinksModel([startNode]);  
+  }
+  else {
+    myDiagram.model = new go.GraphLinksModel(nodes.value);
+  }
   diagramModel.value = myDiagram.model;
 };
 
-const setLicenseToNode = (licenseName) => {
-  const name = licenseName
-  const node = currentNode.value
-
+const setLicenseToNode = (license) => {
+    const node = currentNode.value
     const diagram = node.diagram;
     const startLicense = {
-      text: name,
+      id: license.id,
+      name: license.name,
       weight: 0,
     };
-    console.log(node)
-
     diagram.startTransaction("addLicenseList");
     const data = [...node.data.licenses, startLicense];
     diagram.model.setDataProperty(node.data, "licenses", data);
+    console.log(data, 'data setLicenseToNode')
     licenseListModal.value = data
-      .map((item) => item.text)
-      .filter((item) => item !== name);
+      .map((item) => item.name)
+      .filter((item) => item !== license.name);
   diagram.commitTransaction("addLicenseList");
-  navigator.clipboard.writeText(licenseName);
   isDialogOpen.value = false;
 }
+
+const removeAllNodesAndLinks = () => {
+  if (diagramModel.value !== null) {
+    const model = diagramModel.value;
+    model.startTransaction("remove all nodes and links");
+
+    // Удаляем все ноды и линки
+    model.nodeDataArray = [];
+    model.linkDataArray = [];
+    model.addNodeData(startNode);
+    console.log(model)
+    model.commitTransaction("remove all nodes and links");
+  }
+};
 
 const toggleDialog = () => {
   isDialogOpen.value = !isDialogOpen.value;
 };
 
-const saveJson = () => {
+const fetchNodes = async() => {
+  const response = await api.fetchNodes();
+  nodes.value = response
+  console.log(response, 'response fetchNodes')
+}
+
+const saveJson = async() => {
   const json = diagramModel.value.toJson();
-  console.log(json);
+  console.log(json)
+  await api.saveJson(json);
 };
 
-onMounted(() => {
+onMounted(async() => {
+  await fetchLicenses();
+  await fetchNodes();
   init();
 })
 </script>
@@ -551,14 +567,15 @@ onMounted(() => {
         </button>
       </div>
       <ul class="list">
-        <li v-for="item in computedListLicenses" :key="item.id">
+        <li class="list-item" v-for="item in computedListLicenses" :key="item.id">
           <button class="button-list" @click="setLicenseToNode(item)" type="button">
-            {{ item }}
+            {{ item.name }}
           </button>
         </li>
       </ul>
     </div>
   </div>
+  <button @click="removeAllNodesAndLinks" class="button button-reset">Сбросить конструктор</button>
   <button @click="saveJson" class="button" type="button">
     Сохранить изменения
   </button>
@@ -589,6 +606,8 @@ onMounted(() => {
 .list {
   list-style-type: none;
   padding-left: 0;
+  display: flex;
+  flex-wrap: wrap;
 }
 .button-list {
   color: #00c16a;
@@ -600,8 +619,17 @@ onMounted(() => {
   background: #f7f7fa;
   border: none;
   cursor: pointer;
-  margin-bottom: 15px;
   width: 100%;
+}
+
+.list-item {
+  margin-right: 15px;
+  margin-bottom: 15px;
+}
+
+.list-item:last-child {
+  margin-right: 0;
+  margin-bottom: 0;
 }
 
 .button-list:hover {
@@ -622,6 +650,9 @@ onMounted(() => {
   border: none;
   cursor: pointer;
   z-index: 9999;
+}
+.button-reset {
+  right: 220px;
 }
 .button:hover {
   color: #00c16a;
