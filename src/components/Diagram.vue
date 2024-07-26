@@ -205,8 +205,14 @@ const init = () => {
 
   const addLicense = (e, obj) => {
     const node = obj.part;
-    console.log(licenseList.value, 'licenseList addLicense')
-    console.log(licenseListModal.value, 'licenseListModal addLicense');
+    const data = node.data
+    const key = data.key
+    const model = myDiagram.model;
+    const isHaveChildren = model.nodeDataArray.some((item) => item.parent === key)
+    console.log(isHaveChildren)
+    if (isHaveChildren) {
+      return
+    }
     isDialogOpen.value = true;
     currentNode.value = node;
   };
@@ -410,7 +416,7 @@ const init = () => {
               margin: new go.Margin(0, 0, 10, 0),
             }).add(
               new go.TextBlock({
-                editable: true,
+                editable: false,
                 width: 100,
                 margin: new go.Margin(0, 210, 0,0),
                 column: 0,
