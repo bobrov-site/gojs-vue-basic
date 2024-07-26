@@ -11,18 +11,17 @@ const gray = "#64748B";
 const diagram = ref(null);
 const nodes = ref({});
 const startNode = {
-      key: "1",
-      questionNumber: "1",
-      question: "Является ли ваше произведение ПО?",
-      category: "question",
-      loc: "0, 0"
-}
+  key: "1",
+  questionNumber: "1",
+  question: "Является ли ваше произведение ПО?",
+  category: "question",
+  loc: "0, 0",
+};
 const isDialogOpen = ref(false);
 const diagramModel = shallowRef();
 const currentNode = shallowRef(null);
 const licenseListModal = ref([]);
-const licenseList = ref([
-]);
+const licenseList = ref([]);
 const computedListLicenses = computed(() => {
   if (licenseListModal.value.length === 0) {
     return licenseList.value;
@@ -33,18 +32,18 @@ const computedListLicenses = computed(() => {
   }
 });
 
-const fetchLicenses = async() => {
-  const licenses = await api.fetchLicenses()
+const fetchLicenses = async () => {
+  const licenses = await api.fetchLicenses();
   licenses.map((item) => {
     const license = {
       id: item.id,
       name: item.name,
-      weight: 0
-    }
-    return license
-  })
-  licenseList.value = licenses
-}
+      weight: 0,
+    };
+    return license;
+  });
+  licenseList.value = licenses;
+};
 const init = () => {
   const $ = go.GraphObject.make;
   const myDiagram = $(
@@ -60,7 +59,7 @@ const init = () => {
     const defaultLocation = {
       x: node.location.x + 0,
       y: node.location.y + 200,
-    }
+    };
     if (node !== null) {
       const data = node.data;
       const model = myDiagram.model;
@@ -80,10 +79,12 @@ const init = () => {
           .licenses.filter((item) => item.weight !== "null");
         licenses.push(...parentData);
       }
-      const siblings = model.nodeDataArray.filter((item) => item.parent === data.key)
+      const siblings = model.nodeDataArray.filter(
+        (item) => item.parent === data.key
+      );
       // Добавляем новую ноду в бок ответа
       if (siblings.length !== 0) {
-        defaultLocation.x = siblings[siblings.length - 1].loc.x + 400
+        defaultLocation.x = siblings[siblings.length - 1].loc.x + 400;
       }
       model.addNodeData({
         key: nextKey,
@@ -205,66 +206,68 @@ const init = () => {
 
   const addLicense = (e, obj) => {
     const node = obj.part;
-    const data = node.data
-    const key = data.key
+    const data = node.data;
+    const key = data.key;
     const model = myDiagram.model;
-    const isHaveChildren = model.nodeDataArray.some((item) => item.parent === key)
-    console.log(isHaveChildren)
+    const isHaveChildren = model.nodeDataArray.some(
+      (item) => item.parent === key
+    );
+    console.log(isHaveChildren);
     if (isHaveChildren) {
-      return
+      return;
     }
     isDialogOpen.value = true;
     currentNode.value = node;
   };
 
   const removeNode = (e, obj) => {
-  const node = obj.part;
-  const model = diagramModel.value;
+    const node = obj.part;
+    const model = diagramModel.value;
 
-  if (model) {
-    model.startTransaction("remove node and descendants");
+    if (model) {
+      model.startTransaction("remove node and descendants");
 
-    // Рекурсивная функция для сбора узлов и ссылок
-    const collectNodesAndLinks = (node, nodesToRemove, linksToRemove) => {
-      if (!node) return;
+      // Рекурсивная функция для сбора узлов и ссылок
+      const collectNodesAndLinks = (node, nodesToRemove, linksToRemove) => {
+        if (!node) return;
 
-      // Собираем все ссылки, исходящие из данного узла
-      node.linksConnected.each((link) => {
-        if (link && link.data) {
-          linksToRemove.push(link.data);
+        // Собираем все ссылки, исходящие из данного узла
+        node.linksConnected.each((link) => {
+          if (link && link.data) {
+            linksToRemove.push(link.data);
+          }
+        });
+
+        // Собираем всех потомков рекурсивно
+        node.findTreeChildrenNodes().each((child) => {
+          collectNodesAndLinks(child, nodesToRemove, linksToRemove);
+        });
+
+        // Добавляем сам узел в список для удаления
+        if (node.data) {
+          nodesToRemove.push(node.data);
         }
+      };
+
+      const nodesToRemove = [];
+      const linksToRemove = [];
+
+      // Собираем все узлы и ссылки для удаления
+      collectNodesAndLinks(node, nodesToRemove, linksToRemove);
+
+      // Удаляем все собранные ссылки
+      linksToRemove.forEach((linkData) => {
+        model.removeLinkData(linkData);
       });
 
-      // Собираем всех потомков рекурсивно
-      node.findTreeChildrenNodes().each((child) => {
-        collectNodesAndLinks(child, nodesToRemove, linksToRemove);
+      // Удаляем все собранные узлы
+      nodesToRemove.forEach((nodeData) => {
+        model.removeNodeData(nodeData);
       });
 
-      // Добавляем сам узел в список для удаления
-      if (node.data) {
-        nodesToRemove.push(node.data);
-      }
-    };
-
-    const nodesToRemove = [];
-    const linksToRemove = [];
-
-    // Собираем все узлы и ссылки для удаления
-    collectNodesAndLinks(node, nodesToRemove, linksToRemove);
-
-    // Удаляем все собранные ссылки
-    linksToRemove.forEach((linkData) => {
-      model.removeLinkData(linkData);
-    });
-
-    // Удаляем все собранные узлы
-    nodesToRemove.forEach((nodeData) => {
-      model.removeNodeData(nodeData);
-    });
-
-    model.commitTransaction("remove node and descendants");
-  }
-};
+      model.commitTransaction("remove node and descendants");
+    }
+  };
 
   // Определение шаблона для нод
   const questionTemplate = new go.Node("Auto")
@@ -418,7 +421,7 @@ const init = () => {
               new go.TextBlock({
                 editable: false,
                 width: 100,
-                margin: new go.Margin(0, 210, 0,0),
+                margin: new go.Margin(0, 210, 0, 0),
                 column: 0,
               }).bind(new go.Binding("text", "name").makeTwoWay()),
               new go.TextBlock({ editable: true, column: 1 }).bind(
@@ -576,34 +579,33 @@ const init = () => {
   myDiagram.nodeTemplateMap = templatesMap;
 
   // Создание начальной ноды
-  console.log(nodes.value.nodeDataArray.length === 0)
+  console.log(nodes.value.nodeDataArray.length === 0);
   if (nodes.value.nodeDataArray.length === 0) {
-    myDiagram.model = new go.GraphLinksModel([startNode]);  
-  }
-  else {
+    myDiagram.model = new go.GraphLinksModel([startNode]);
+  } else {
     myDiagram.model = new go.GraphLinksModel(nodes.value);
   }
   diagramModel.value = myDiagram.model;
 };
 
 const setLicenseToNode = (license) => {
-    const node = currentNode.value
-    const diagram = node.diagram;
-    const startLicense = {
-      id: license.id,
-      name: license.name,
-      weight: 0,
-    };
-    diagram.startTransaction("addLicenseList");
-    const data = [...node.data.licenses, startLicense];
-    diagram.model.setDataProperty(node.data, "licenses", data);
-    console.log(data, 'data setLicenseToNode')
-    licenseListModal.value = data
-      .map((item) => item.name)
-      .filter((item) => item !== license.name);
+  const node = currentNode.value;
+  const diagram = node.diagram;
+  const startLicense = {
+    id: license.id,
+    name: license.name,
+    weight: 0,
+  };
+  diagram.startTransaction("addLicenseList");
+  const data = [...node.data.licenses, startLicense];
+  diagram.model.setDataProperty(node.data, "licenses", data);
+  console.log(data, "data setLicenseToNode");
+  licenseListModal.value = data
+    .map((item) => item.name)
+    .filter((item) => item !== license.name);
   diagram.commitTransaction("addLicenseList");
   isDialogOpen.value = false;
-}
+};
 
 const removeAllNodesAndLinks = () => {
   if (diagramModel.value !== null) {
@@ -614,7 +616,7 @@ const removeAllNodesAndLinks = () => {
     model.nodeDataArray = [];
     model.linkDataArray = [];
     model.addNodeData(startNode);
-    console.log(model)
+    console.log(model);
     model.commitTransaction("remove all nodes and links");
   }
 };
@@ -623,23 +625,23 @@ const toggleDialog = () => {
   isDialogOpen.value = !isDialogOpen.value;
 };
 
-const fetchNodes = async() => {
+const fetchNodes = async () => {
   const response = await api.fetchNodes();
-  nodes.value = response
-  console.log(response, 'response fetchNodes')
-}
+  nodes.value = response;
+  console.log(response, "response fetchNodes");
+};
 
-const saveJson = async() => {
+const saveJson = async () => {
   const json = diagramModel.value.toJson();
-  console.log(json)
+  console.log(json);
   await api.saveJson(json);
 };
 
-onMounted(async() => {
+onMounted(async () => {
   await fetchLicenses();
   await fetchNodes();
   init();
-})
+});
 </script>
 
 <template>
@@ -651,16 +653,28 @@ onMounted(async() => {
           X
         </button>
       </div>
-      <ul class="list">
-        <li class="list-item" v-for="item in computedListLicenses" :key="item.id">
-          <button class="button-list" @click="setLicenseToNode(item)" type="button">
-            {{ item.name }}
-          </button>
-        </li>
-      </ul>
+      <div class="row">
+        <ul class="list">
+          <li
+            class="list-item"
+            v-for="item in computedListLicenses"
+            :key="item.id"
+          >
+            <button
+              class="button-list"
+              @click="setLicenseToNode(item)"
+              type="button"
+            >
+              {{ item.name }}
+            </button>
+          </li>
+        </ul>
+      </div>
     </div>
   </div>
-  <button @click="removeAllNodesAndLinks" class="button button-reset">Сбросить конструктор</button>
+  <button @click="removeAllNodesAndLinks" class="button button-reset">
+    Сбросить конструктор
+  </button>
   <button @click="saveJson" class="button" type="button">
     Сохранить изменения
   </button>
