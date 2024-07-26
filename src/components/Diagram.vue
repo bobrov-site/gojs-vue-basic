@@ -212,38 +212,53 @@ const init = () => {
   };
 
   const removeNode = (e, obj) => {
-    const node = obj.part;
+  const node = obj.part;
   const model = diagramModel.value;
 
   if (model) {
     model.startTransaction("remove node and descendants");
 
-    // Рекурсивная функция для удаления узлов и ссылок
-    const removeNodeAndChildren = (node) => {
-      // Удаляем все ссылки, исходящие из данного узла
+    // Рекурсивная функция для сбора узлов и ссылок
+    const collectNodesAndLinks = (node, nodesToRemove, linksToRemove) => {
+      if (!node) return;
+
+      // Собираем все ссылки, исходящие из данного узла
       node.linksConnected.each((link) => {
         if (link && link.data) {
-          model.removeLinkData(link.data);
+          linksToRemove.push(link.data);
         }
       });
 
-      // Рекурсивно удаляем всех потомков
+      // Собираем всех потомков рекурсивно
       node.findTreeChildrenNodes().each((child) => {
-        removeNodeAndChildren(child);
+        collectNodesAndLinks(child, nodesToRemove, linksToRemove);
       });
 
-      // Удаляем сам узел
-      if (node && node.data) {
-        model.removeNodeData(node.data);
+      // Добавляем сам узел в список для удаления
+      if (node.data) {
+        nodesToRemove.push(node.data);
       }
     };
 
-    // Начинаем с удаления текущего узла и его потомков
-    removeNodeAndChildren(node);
+    const nodesToRemove = [];
+    const linksToRemove = [];
+
+    // Собираем все узлы и ссылки для удаления
+    collectNodesAndLinks(node, nodesToRemove, linksToRemove);
+
+    // Удаляем все собранные ссылки
+    linksToRemove.forEach((linkData) => {
+      model.removeLinkData(linkData);
+    });
+
+    // Удаляем все собранные узлы
+    nodesToRemove.forEach((nodeData) => {
+      model.removeNodeData(nodeData);
+    });
 
     model.commitTransaction("remove node and descendants");
   }
-  }
+};
 
   // Определение шаблона для нод
   const questionTemplate = new go.Node("Auto")
@@ -459,6 +474,22 @@ const init = () => {
             new go.TextBlock({
               text: "Результат",
               stroke: green,
+              font: "14px DM Sans, sans-serif",
+            })
+          )
+        )
+        .add(
+          go.GraphObject.build("Button", {
+            click: removeNode,
+            height: 44,
+            width: 320,
+            row: 8,
+            column: 1,
+            margin: new go.Margin(12, 0, 12, 0),
+          }).add(
+            new go.TextBlock({
+              text: "Удалить",
+              stroke: red,
               font: "14px DM Sans, sans-serif",
             })
           )
