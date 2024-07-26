@@ -214,6 +214,12 @@ const init = () => {
     if (isHaveChildren) {
       return;
     }
+    if (data.licenses.length !== 0) {
+      filtredLicensesListModal.value = licenseList.value.filter((item) => {
+        const map = data.licenses.map((license) => license.id)
+        return !map.includes(item.id)
+      })
+    }
     isDialogOpen.value = true;
     currentNode.value = node;
   };
