@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, shallowRef } from "vue";
+import { computed, onMounted, ref, shallowRef, watch } from "vue";
 import * as go from "gojs";
 import "../assets//styles/style.css";
 import api from "../api";
@@ -20,17 +20,12 @@ const startNode = {
 const isDialogOpen = ref(false);
 const diagramModel = shallowRef();
 const currentNode = shallowRef(null);
-const licenseListModal = ref([]);
+const selectedLicenses = ref([]);
 const licenseList = ref([]);
-const computedListLicenses = computed(() => {
-  if (licenseListModal.value.length === 0) {
-    return licenseList.value;
-  } else {
-    return licenseList.value
-      .filter((l) => !licenseListModal.value.includes(l.name))
-      .map((item) => item);
-  }
-});
+const filtredLicensesListModal = ref([])
+watch(selectedLicenses, () => {
+  filtredLicensesListModal.value = licenseList.value.filter((item) => selectedLicenses.value.includes(item.id))
+})
 
 const fetchLicenses = async () => {
   const licenses = await api.fetchLicenses();
@@ -601,9 +596,10 @@ const setLicenseToNode = (license) => {
   diagram.startTransaction("addLicenseList");
   const data = [...node.data.licenses, startLicense];
   diagram.model.setDataProperty(node.data, "licenses", data);
-  licenseListModal.value = data
-    .map((item) => item.name)
-    .filter((item) => item !== license.name);
+  selectedLicenses.value.push(startLicense);
+  filtredLicensesListModal.value = licenseList.value.filter((item) => {
+    return item.name !== license.name;
+  })
   diagram.commitTransaction("addLicenseList");
   isDialogOpen.value = false;
 };
@@ -639,6 +635,7 @@ onMounted(async () => {
   await fetchLicenses();
   await fetchNodes();
   init();
+  filtredLicensesListModal.value = licenseList.value
 });
 </script>
 
@@ -655,7 +652,7 @@ onMounted(async () => {
         <ul class="list">
           <li
             class="list-item"
-            v-for="item in computedListLicenses"
+            v-for="item in filtredLicensesListModal"
             :key="item.id"
           >
             <button
@@ -680,7 +677,7 @@ onMounted(async () => {
 
 <style scoped>
 .goDiagram {
-  width: 100vw;
+  width: 100%;
   height: 100vh;
   border: solid black 1px;
 }
