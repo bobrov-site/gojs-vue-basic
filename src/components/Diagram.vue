@@ -216,7 +216,6 @@ const init = () => {
     const isHaveChildren = model.nodeDataArray.some(
       (item) => item.parent === key
     );
-    console.log(isHaveChildren);
     if (isHaveChildren) {
       return;
     }
@@ -583,7 +582,6 @@ const init = () => {
   myDiagram.nodeTemplateMap = templatesMap;
 
   // Создание начальной ноды
-  console.log(nodes.value.nodeDataArray.length === 0);
   if (nodes.value.nodeDataArray.length === 0) {
     myDiagram.model = new go.GraphLinksModel([startNode]);
   } else {
@@ -603,7 +601,6 @@ const setLicenseToNode = (license) => {
   diagram.startTransaction("addLicenseList");
   const data = [...node.data.licenses, startLicense];
   diagram.model.setDataProperty(node.data, "licenses", data);
-  console.log(data, "data setLicenseToNode");
   licenseListModal.value = data
     .map((item) => item.name)
     .filter((item) => item !== license.name);
@@ -620,7 +617,6 @@ const removeAllNodesAndLinks = () => {
     model.nodeDataArray = [];
     model.linkDataArray = [];
     model.addNodeData(startNode);
-    console.log(model);
     model.commitTransaction("remove all nodes and links");
   }
 };
@@ -632,12 +628,10 @@ const toggleDialog = () => {
 const fetchNodes = async () => {
   const response = await api.fetchNodes();
   nodes.value = response;
-  console.log(response, "response fetchNodes");
 };
 
 const saveJson = async () => {
   const json = diagramModel.value.toJson();
-  console.log(json);
   await api.saveJson(json);
 };
 
