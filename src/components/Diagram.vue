@@ -211,6 +211,40 @@ const init = () => {
     currentNode.value = node;
   };
 
+  const removeNode = (e, obj) => {
+    const node = obj.part;
+  const model = diagramModel.value;
+
+  if (model) {
+    model.startTransaction("remove node and descendants");
+
+    // Рекурсивная функция для удаления узлов и ссылок
+    const removeNodeAndChildren = (node) => {
+      // Удаляем все ссылки, исходящие из данного узла
+      node.linksConnected.each((link) => {
+        if (link && link.data) {
+          model.removeLinkData(link.data);
+        }
+      });
+
+      // Рекурсивно удаляем всех потомков
+      node.findTreeChildrenNodes().each((child) => {
+        removeNodeAndChildren(child);
+      });
+
+      // Удаляем сам узел
+      if (node && node.data) {
+        model.removeNodeData(node.data);
+      }
+    };
+
+    // Начинаем с удаления текущего узла и его потомков
+    removeNodeAndChildren(node);
+
+    model.commitTransaction("remove node and descendants");
+  }
+  }
+
   // Определение шаблона для нод
   const questionTemplate = new go.Node("Auto")
     .bind(new go.Binding("location", "loc").makeTwoWay())
@@ -264,6 +298,20 @@ const init = () => {
               text: "Добавить ответ",
               font: "14px DM Sans, sans-serif",
               stroke: green,
+            })
+          )
+        )
+        .add(
+          go.GraphObject.build("Button", {
+            click: removeNode,
+            height: 44,
+            width: 340,
+            margin: new go.Margin(0, 0, 12, 0),
+          }).add(
+            new go.TextBlock({
+              text: "Удалить",
+              font: "14px DM Sans, sans-serif",
+              stroke: red,
             })
           )
         )
