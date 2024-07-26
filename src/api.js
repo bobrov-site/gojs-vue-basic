@@ -13,12 +13,27 @@ const axiosInstance = axios.create({
 
 const fetchLicenses = async() => {
     const response = await axiosInstance.get(routes.licensesDictionary, { headers })
-    return response;
+    return response.data;
+}
+
+const fetchNodes = async() => {
+    const response = await axiosInstance.get(routes.quiz, { headers })
+    return response.data.quiz
+}
+
+const saveJson = async(json) => {
+    const response = await axiosInstance({
+        method: 'POST',
+        url: routes.quiz,
+        data: json
+    })
+    return response.data
 }
 
 const api = {
     fetchLicenses,
-    headers
+    saveJson,
+    fetchNodes,
 }
 
 export default api
